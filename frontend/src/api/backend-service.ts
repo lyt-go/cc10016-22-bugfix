@@ -1,8 +1,40 @@
 import { request } from './client'
 import { moduleMeta } from '@/data/modules'
-import type { ActionResult, EntryRow, OverviewResult, PageResult } from '@/data/types'
+import type {
+  ActionResult,
+  EntryRow,
+  OverviewResult,
+  PageResult,
+  ReportDetail,
+  RouteEvaluation,
+} from '@/data/types'
 
 export { moduleMeta }
+
+// 验证签认回执与报告纳入详情走资源详情接口；年度总结详情已内含回执。
+export async function getReportDetail(id: number): Promise<ReportDetail> {
+  const result = await getEntry('annual_summary', id)
+  return result as ReportDetail
+}
+
+export async function getRouteEvaluation(id: number): Promise<RouteEvaluation | null> {
+  const response = await request(`/api/cross/verification/route/${id}`)
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error('路线签认状态读取失败')
+  return (await response.json()) as RouteEvaluation
+}
+
+export async function getVerificationReceipts(): Promise<{ items: unknown[]; total: number }> {
+  const response = await request('/api/cross/verification/receipts')
+  if (!response.ok) throw new Error('验证签认回执读取失败')
+  return await response.json()
+}
+
+export async function getEntry(key: string, id: number): Promise<EntryRow> {
+  const response = await request(`/api/${key}/${id}`)
+  if (!response.ok) throw new Error('业务详情读取失败')
+  return await response.json()
+}
 
 export async function listEntries(
   key: string,

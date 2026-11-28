@@ -17,6 +17,7 @@ from datetime import datetime, date
 from typing import Any
 
 from app.services import service_for
+from app.verification import compile_inclusions, ensure_legacy_receipt
 
 
 def build_migration_from_locations(track_individual: str) -> dict[str, Any]:
@@ -298,11 +299,17 @@ def build_annual_summary(year: int) -> dict[str, Any]:
     observation_count = _count("behavior_observe")
     census_count = _count("population_census", "已确认")
     rescue_count = _count("rescue_record", "已放归")
-    migration_count = _count("migration_track", "已验证")
     genetic_count = _count("genetic_sample", "已入库")
     patrol_count = _count("patrol_record", "已审阅")
     research_count = _count("research_output", "已发表")
     threat_count = _count("threat_assessment", "已签发")
+
+    # 迁徙路线只认正式签认回执，同一路线在一份报告中只计一次。
+    for route in store.rows("migration_track"):
+        if route.get("status") == "已验证":
+            ensure_legacy_receipt(route)
+    inclusions = compile_inclusions()
+    migration_count = inclusions["route_count"]
 
     # 自动创建年度总结记录
     rows = store.rows("annual_summary")
@@ -331,6 +338,21 @@ def build_annual_summary(year: int) -> dict[str, Any]:
             "status": "编制中",
             "pending": True,
             "abnormal": False,
+            "现场验证清单": inclusions["included_versions"],
+            "纳入依据": (
+                f"验证签认回执：{inclusions['route_count']}条已正式签认路线，"
+                f"{inclusions['pending_count']}条待复核/待签认未纳入"
+            ),
+            "待复核清单": [
+                {
+                    "route_id": item["route_id"],
+                    "track_individual": item["追踪个体"],
+                    "current_version": item["版次"],
+                    "included_version": item["可取得版次"],
+                    "reason": item["说明"],
+                }
+                for item in inclusions["pending_routes"]
+            ],
         }
         rows.append(summary)
 
@@ -348,6 +370,24 @@ def build_annual_summary(year: int) -> dict[str, Any]:
             "reviewed_patrols": patrol_count,
             "published_research": research_count,
             "issued_threats": threat_count,
+        },
+        "inclusions": {
+            "route_count": inclusions["route_count"],
+            "included_versions": inclusions["included_versions"],
+            "pending_routes": [
+                {
+                    "route_id": item["route_id"],
+                    "track_individual": item["追踪个体"],
+                    "decision": item["纳入结论"],
+                    "review_state": item["复核状态"],
+                    "current_version": item["版次"],
+                    "included_version": item["可取得版次"],
+                    "receipt_no": item["回执编号"],
+                    "reason": item["说明"],
+                }
+                for item in inclusions["pending_routes"]
+            ],
+            "included_routes": inclusions["included_routes"],
         },
         "annual_summary_entry": summary,
     }

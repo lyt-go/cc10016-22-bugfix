@@ -79,6 +79,13 @@ def get_entry(module: str, entry_id: int) -> dict[str, Any]:
     entry = service.get_entry(entry_id)
     if entry is None:
         raise HTTPException(status_code=404, detail=f"{service.ENTITY} {entry_id} 不存在或已归档")
+    # 年度总结详情用同一份验证签认回执作为纳入凭据。
+    if module == "annual_summary" and hasattr(service, "report_detail"):
+        return service.report_detail(entry)
+    if module == "migration_track" and hasattr(service, "route_evaluation"):
+        evaluation = service.route_evaluation(entry_id)
+        if evaluation is not None:
+            entry["纳入结论"] = evaluation
     return entry
 
 

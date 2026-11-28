@@ -87,6 +87,36 @@ def get_annual_summary(year: int):
     return result
 
 
+@router.get("/verification/receipts")
+def get_verification_receipts(route_id: int | None = None, decision: str | None = None):
+    """现场验证清单：签认回执及其对应当前版次与纳入结论。"""
+    from app.services import service_for
+
+    service = service_for("migration_track")
+    return service.receipt_ledger(route_id=route_id, decision=decision)
+
+
+@router.get("/verification/route/{route_id}")
+def get_route_evaluation(route_id: int):
+    """单条路线的签认状态与本次可采用/需复核的版次。"""
+    from app.services import service_for
+
+    service = service_for("migration_track")
+    evaluation = service.route_evaluation(route_id)
+    if evaluation is None:
+        raise HTTPException(status_code=404, detail=f"迁徙路径 {route_id} 不存在或已归档")
+    return evaluation
+
+
+@router.get("/verification/inclusions")
+def get_verification_inclusions():
+    """按路线去重的纳入清单，汇总与现场验证共用同一批回执。"""
+    from app.services import service_for
+
+    service = service_for("migration_track")
+    return service.inclusion_snapshot()
+
+
 @router.get("/overview/data-quality")
 def get_data_quality_overview():
     """全系统数据质量概览：各模块异常率、完整性评估等。"""

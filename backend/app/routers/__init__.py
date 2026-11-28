@@ -3,4 +3,5 @@ from __future__ import annotations
 
 from app.routers import cross_module, resource
 
-ROUTERS = [resource, cross_module]
+# 跨模块固定路径先注册，避免 /api/cross/annual-summary 被 /api/{module}/{entry_id} 抢先匹配。
+ROUTERS = [cross_module, resource]

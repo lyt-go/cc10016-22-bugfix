@@ -79,3 +79,25 @@ npm run dev
 
 领域：应用开发
 子方向：web前端/全栈开发
+
+## 迁徙路线验证签认与年度总结纳入
+
+- `验证路线` 只能对「已绘制且完整点序」的版次办理；从 `待绘制` 直接验证会被拒绝，
+  点序不连续或缺经纬度也不会签发回执。每办理一次签认产生一份
+  `验证签认回执`（编号 `VR-<年>-<序号>`），重复提交沿用同一份回执。
+- 同一路线可以有两张到达：一张是已绘制版签认，一张是现场补报点引起的 `更新路线`。
+  补报点会开出新的工作版次，旧版回执继续有效；路线评估给出「本次可采用第 N 版」
+  与「第 M 版需接办复核」，两种到达顺序结论一致。
+- `年度总结` 的 `提交报告` 凭回执冻结纳入清单：同一路线只计一次，纳入版次与
+  `/api/cross/verification/inclusions`（现场验证清单）一致；已提交/已审核/已发布
+  的报告回查时仍显示提交当时的版次与回执编号。存量 `已验证` 路线会补发
+  `历史存量认定` 回执，兼容既有总结。
+- 接口：
+  - `GET /api/cross/verification/route/{id}` 单条路线签认与纳入结论
+  - `GET /api/cross/verification/receipts` 现场验证回执清单
+  - `GET /api/cross/verification/inclusions` 按路线去重的纳入清单
+  - `GET /api/annual_summary/{id}` 报告详情（含纳入回执与版次）
+  - `GET /api/cross/annual-summary?year=YYYY` 年度汇总（含 `inclusions`）
+
+测试：`backend/.venv/bin/python backend/tests/test_migration_verification.py`
+（以及原有的 `backend/tests/test_cross_module.py`）。
